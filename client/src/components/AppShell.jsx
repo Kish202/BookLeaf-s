@@ -1,5 +1,5 @@
-import { LogOut } from 'lucide-react'
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { LogOut, Menu } from 'lucide-react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Logo } from '@/components/Logo'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -46,6 +46,38 @@ function LiveIndicator({ connected }) {
   )
 }
 
+function MobileNav({ items, connected }) {
+  const { pathname } = useLocation()
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" className="rounded-full md:hidden" aria-label="Open menu">
+          <Menu />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        {items.map((item) => (
+          <DropdownMenuItem
+            key={item.to}
+            asChild
+            className={cn('font-semibold', pathname === item.to && 'bg-primary/15 text-primary focus:bg-primary/15 focus:text-primary')}
+          >
+            <NavLink to={item.to} end>
+              {item.label}
+            </NavLink>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <span className={cn('size-2 rounded-full', connected ? 'animate-pulse bg-mint-foreground' : 'bg-muted-foreground/40')} />
+          {connected ? 'Live updates on' : 'Reconnecting…'}
+        </DropdownMenuLabel>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export function AppShell() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -72,7 +104,7 @@ export function AppShell() {
           <NavLink to="/" className="shrink-0">
             <Logo />
           </NavLink>
-          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+          <nav className="hidden min-w-0 flex-1 items-center gap-1 md:flex">
             {NAV[user.role].map((item) => (
               <NavLink
                 key={item.to}
@@ -89,8 +121,9 @@ export function AppShell() {
               </NavLink>
             ))}
           </nav>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             <LiveIndicator connected={connected} />
+            <MobileNav items={NAV[user.role]} connected={connected} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-10 gap-2 rounded-full pr-3 pl-1">
