@@ -24,7 +24,7 @@ const DEFAULT_FILTERS = {
   status: 'open,in_progress',
   category: ANY,
   priority: ANY,
-  assignedTo: ANY,
+  assignedTo: 'me',
   from: '',
   to: '',
   search: '',
@@ -145,17 +145,18 @@ export function QueuePage() {
     setPage(1)
   }
 
-  const isDefault = JSON.stringify(filters) === JSON.stringify(DEFAULT_FILTERS)
+  const matches = (patch) => JSON.stringify(filters) === JSON.stringify({ ...DEFAULT_FILTERS, ...patch })
+  const isDefault = matches({})
 
   return (
     <>
       <PageHeader title="Ticket Queue 📬" description={`Good to see you, ${user.name}. Most urgent and longest-waiting first.`} />
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Counter emoji="📥" label="Unresolved" value={counts.data?.unresolved} tone="bg-sky text-sky-foreground" onClick={() => quickFilter({})} active={isDefault} />
-        <Counter emoji="🔥" label="Critical & high" value={counts.data?.critical} tone="bg-peach text-peach-foreground" onClick={() => quickFilter({ priority: 'critical,high' })} active={filters.priority === 'critical,high'} />
-        <Counter emoji="🙋" label="Unassigned" value={counts.data?.unassigned} tone="bg-lavender text-lavender-foreground" onClick={() => quickFilter({ assignedTo: 'unassigned' })} active={filters.assignedTo === 'unassigned'} />
-        <Counter emoji="⭐" label="Assigned to me" value={counts.data?.mine} tone="bg-mint text-mint-foreground" onClick={() => quickFilter({ assignedTo: 'me' })} active={filters.assignedTo === 'me'} />
+        <Counter emoji="📥" label="Unresolved" value={counts.data?.unresolved} tone="bg-sky text-sky-foreground" onClick={() => quickFilter({ assignedTo: ANY })} active={matches({ assignedTo: ANY })} />
+        <Counter emoji="🔥" label="Critical & high" value={counts.data?.critical} tone="bg-peach text-peach-foreground" onClick={() => quickFilter({ priority: 'critical,high', assignedTo: ANY })} active={matches({ priority: 'critical,high', assignedTo: ANY })} />
+        <Counter emoji="🙋" label="Unassigned" value={counts.data?.unassigned} tone="bg-lavender text-lavender-foreground" onClick={() => quickFilter({ assignedTo: 'unassigned' })} active={matches({ assignedTo: 'unassigned' })} />
+        <Counter emoji="⭐" label="Assigned to me" value={counts.data?.mine} tone="bg-mint text-mint-foreground" onClick={() => quickFilter({})} active={isDefault} />
       </div>
 
       <Card className="mb-4 gap-3 rounded-lg border-0 p-4 shadow-sm">
@@ -211,7 +212,15 @@ export function QueuePage() {
       {isPending && <LoadingState label="Loading the queue…" />}
       {error && <ErrorState error={error} onRetry={refetch} />}
       {data?.data.length === 0 && (
-        <EmptyState emoji="🌷" title="No tickets match" description={isDefault ? 'Inbox zero! Every ticket has been handled.' : 'Try loosening the filters.'} />
+        isDefault ? (
+          <EmptyState emoji="🌷" title="Nothing assigned to you" description="You're all caught up on your own tickets.">
+            <Button variant="outline" size="sm" onClick={() => quickFilter({ assignedTo: ANY })}>
+              Show all unresolved tickets
+            </Button>
+          </EmptyState>
+        ) : (
+          <EmptyState emoji="🌷" title="No tickets match" description="Try loosening the filters." />
+        )
       )}
       {data?.data.length > 0 && (
         <Card className={cn('overflow-hidden rounded-lg border-0 p-0 shadow-sm transition-opacity', isFetching && 'opacity-70')}>
