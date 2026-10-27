@@ -26,7 +26,7 @@ Built with PostgreSQL (on Supabase), Express, React and Node.js. AI is from Groq
 | | Link |
 |---|---|
 | Website | [https://book-leaf-s-cy1o.vercel.app](https://book-leaf-s-cy1o.vercel.app) |
-| API | `https://<your-api>.onrender.com/api` (check it's running: `/api/health`) |
+| API | [https://bookleaf-server-4wnf.onrender.com/api](https://bookleaf-server-4wnf.onrender.com/api/health) (opens the health check) |
 
 The database already has the sample data (10 authors, 18 books). The API is on Render's free plan, which goes to sleep after 15 minutes with no visitors. The first request after that can take about 30 seconds.
 
@@ -202,7 +202,7 @@ All three can be changed with the `GROQ_*` settings.
 
 ## API documentation
 
-Base address: `http://localhost:4000/api` on your computer, `https://<your-api>.onrender.com/api` live.
+Base address: `http://localhost:4000/api` on your computer, `https://bookleaf-server-4wnf.onrender.com/api` live.
 
 **Logging in.** `POST /auth/login` gives you a token. Send it as `Authorization: Bearer <token>` on every other request. Only `/health` and `/auth/login` work without it. Using a URL your role isn't allowed gives `403`. An author asking for someone else's ticket or book gets `404`, so they can't even tell it exists.
 
@@ -343,7 +343,7 @@ The login token is sent in a header, not in the URL, so it doesn't end up in ser
 ## Deployment
 
 - **API on Render** using `server/render.yaml` (New → Blueprint, and set the Blueprint path to `server/render.yaml`). Type `DATABASE_URL` and `GROQ_API_KEY` into the Render dashboard. `CLIENT_ORIGIN` is already set to the Vercel address in the file, and Render creates `JWT_SECRET` itself. Render uses `/api/health` to check the API is up.
-- **Website on Vercel** with the root folder set to `client` and the setting `VITE_API_URL=https://<your-api>.onrender.com/api`. `client/vercel.json` makes every page address load the app, so refreshing a page like `/tickets/5` works, and lets browsers keep the built files for a year.
+- **Website on Vercel** with the root folder set to `client` and the setting `VITE_API_URL=https://bookleaf-server-4wnf.onrender.com/api`. `client/vercel.json` makes every page address load the app, so refreshing a page like `/tickets/5` works, and lets browsers keep the built files for a year.
 - **Database on Supabase.** Run `npm run db:reset` once from `server/` with the live `DATABASE_URL` to create the tables and load the sample data.
 
 ## What's missing and what I'd add next
