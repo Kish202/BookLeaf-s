@@ -10,7 +10,8 @@ const server = app.listen(config.port, (err) => {
     console.error(`Could not start server on port ${config.port}: ${err.message}`);
     process.exit(1);
   }
-  console.log(`BookLeaf API listening on http://localhost:${config.port} (${config.env})`);
+  const where = config.isProduction ? `port ${config.port}` : `http://localhost:${config.port}`;
+  console.log(`BookLeaf API listening on ${where} (${config.env})`);
 });
 
 function shutdown(signal) {

@@ -22,8 +22,8 @@ services:
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 1d
-      # Comma-separated; set to the Vercel URL, e.g. https://bookleaf.vercel.app
+      # Comma-separated frontend origins allowed by CORS
       - key: CLIENT_ORIGIN
-        sync: false
+        value: https://book-leaf-s-cy1o.vercel.app
       - key: GROQ_API_KEY
         sync: false
