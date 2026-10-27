@@ -1,6 +1,7 @@
 import { classifyByKeywords } from '../ai/keywordClassifier.js';
 import { RESOLVED_STATUSES } from '../constants/tickets.js';
 import { query, withTransaction } from '../db/pool.js';
+import { publish } from '../realtime/events.js';
 import { AppError } from '../utils/AppError.js';
 import { generateDraft as aiGenerateDraft, classifyTicket } from './ai.service.js';
 import { assertBookBelongsToAuthor, toBook } from './book.service.js';
@@ -159,7 +160,12 @@ export async function getTicket(user, ticketId) {
 
   if (user.role === 'author') {
     const { rows: messages } = await messagesPromise;
-    return { ...toTicket(row, 'author'), messages: messages.map(toMessage) };
+    // Whether a reply started from an AI draft is internal reporting data.
+    const authorMessages = messages.map((m) => {
+      const { aiAssisted: _aiAssisted, ...message } = toMessage(m);
+      return message;
+    });
+    return { ...toTicket(row, 'author'), messages: authorMessages };
   }
 
   const [{ rows: messages }, { rows: notes }, bookResult] = await Promise.all([
@@ -215,9 +221,12 @@ export async function createTicket(user, input) {
     ],
   );
   const ticketId = rows[0].id;
+  publish({ type: 'ticket.created', ticketId, authorId: user.authorId });
 
   // The author does not wait on the LLM; it refines the triage in the background.
-  classifyTicket(ticketId).catch((err) => console.error(`Background classification failed for ${ticketId}`, err));
+  classifyTicket(ticketId)
+    .then((result) => result && publish({ type: 'ticket.classified', ticketId, audience: 'admins' }))
+    .catch((err) => console.error(`Background classification failed for ${ticketId}`, err));
 
   return getTicket(user, ticketId);
 }
@@ -230,7 +239,7 @@ export async function createTicket(user, input) {
  *  - authors cannot reply to `closed` tickets.
  */
 export async function addMessage(user, ticketId, { body, aiAssisted }) {
-  return withTransaction(async (client) => {
+  const { authorId, ...result } = await withTransaction(async (client) => {
     const { rows } = await client.query(
       'SELECT id, author_id, status, assigned_to FROM tickets WHERE id = $1 FOR UPDATE',
       [ticketId],
@@ -273,8 +282,11 @@ export async function addMessage(user, ticketId, { body, aiAssisted }) {
       [inserted[0].id],
     );
 
-    return { message: toMessage(messageRows[0]), ticketStatus: nextStatus };
+    return { message: toMessage(messageRows[0]), ticketStatus: nextStatus, authorId: ticket.author_id };
   });
+
+  publish({ type: 'message.created', ticketId, authorId, senderRole: user.role });
+  return result;
 }
 
 async function assertIsAdminUser(userId) {
@@ -322,9 +334,16 @@ export async function updateTicket(admin, ticketId, changes) {
     sets.push(`assigned_to = ${param(changes.assignedTo)}`);
   }
 
-  const { rowCount } = await query(`UPDATE tickets SET ${sets.join(', ')} WHERE id = $1`, params);
-  if (rowCount === 0) throw AppError.notFound('Ticket');
+  const { rows } = await query(`UPDATE tickets SET ${sets.join(', ')} WHERE id = $1 RETURNING author_id`, params);
+  if (rows.length === 0) throw AppError.notFound('Ticket');
 
+  // Authors only see status; category, priority and assignment are internal.
+  publish({
+    type: 'ticket.updated',
+    ticketId,
+    authorId: rows[0].author_id,
+    audience: changes.status !== undefined ? 'all' : 'admins',
+  });
   return getTicket(admin, ticketId);
 }
 
@@ -340,6 +359,7 @@ export async function reclassify(admin, ticketId) {
   if (!result) {
     throw AppError.serviceUnavailable('AI_UNAVAILABLE', 'AI classification is unavailable right now. Set the category manually or try again shortly.');
   }
+  publish({ type: 'ticket.classified', ticketId, audience: 'admins' });
   return getTicket(admin, ticketId);
 }
 
@@ -354,5 +374,6 @@ export async function addNote(admin, ticketId, body) {
     [ticketId, admin.id, body],
   );
   if (!rows[0]) throw AppError.notFound('Ticket');
+  publish({ type: 'note.created', ticketId, audience: 'admins' });
   return toNote(rows[0]);
 }

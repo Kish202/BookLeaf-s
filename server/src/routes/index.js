@@ -3,6 +3,7 @@ import { query } from '../db/pool.js';
 import aiRoutes from './ai.routes.js';
 import authRoutes from './auth.routes.js';
 import bookRoutes from './books.routes.js';
+import eventRoutes from './events.routes.js';
 import ticketRoutes from './tickets.routes.js';
 import userRoutes from './users.routes.js';
 
@@ -20,6 +21,7 @@ router.get('/health', async (_req, res) => {
 router.use('/ai', aiRoutes);
 router.use('/auth', authRoutes);
 router.use('/books', bookRoutes);
+router.use('/events', eventRoutes);
 router.use('/tickets', ticketRoutes);
 router.use('/users', userRoutes);
 
