@@ -1,0 +1,106 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/nunito";
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Nunito Variable', ui-rounded, system-ui, sans-serif;
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+
+    /* Pastel palette used for status, priority and category badges. */
+    --color-blush: var(--blush);
+    --color-blush-foreground: var(--blush-foreground);
+    --color-lavender: var(--lavender);
+    --color-lavender-foreground: var(--lavender-foreground);
+    --color-mint: var(--mint);
+    --color-mint-foreground: var(--mint-foreground);
+    --color-peach: var(--peach);
+    --color-peach-foreground: var(--peach-foreground);
+    --color-sky: var(--sky);
+    --color-sky-foreground: var(--sky-foreground);
+    --color-butter: var(--butter);
+    --color-butter-foreground: var(--butter-foreground);
+
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    --radius: 1rem;
+
+    --background: oklch(0.985 0.012 350);
+    --foreground: oklch(0.33 0.06 330);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.33 0.06 330);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.33 0.06 330);
+    --primary: oklch(0.7 0.16 355);
+    --primary-foreground: oklch(0.99 0.01 350);
+    --secondary: oklch(0.95 0.035 300);
+    --secondary-foreground: oklch(0.42 0.1 300);
+    --muted: oklch(0.965 0.016 340);
+    --muted-foreground: oklch(0.56 0.04 330);
+    --accent: oklch(0.955 0.04 165);
+    --accent-foreground: oklch(0.4 0.08 165);
+    --destructive: oklch(0.64 0.2 18);
+    --border: oklch(0.92 0.028 345);
+    --input: oklch(0.92 0.028 345);
+    --ring: oklch(0.8 0.1 355);
+
+    --blush: oklch(0.94 0.045 355);
+    --blush-foreground: oklch(0.5 0.15 355);
+    --lavender: oklch(0.94 0.04 300);
+    --lavender-foreground: oklch(0.45 0.12 300);
+    --mint: oklch(0.94 0.05 165);
+    --mint-foreground: oklch(0.42 0.09 165);
+    --peach: oklch(0.94 0.05 50);
+    --peach-foreground: oklch(0.5 0.13 40);
+    --sky: oklch(0.94 0.04 235);
+    --sky-foreground: oklch(0.45 0.1 245);
+    --butter: oklch(0.96 0.06 95);
+    --butter-foreground: oklch(0.48 0.1 75);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(circle at 0% 0%, oklch(0.95 0.04 355 / 0.7), transparent 35%),
+      radial-gradient(circle at 100% 0%, oklch(0.95 0.04 300 / 0.6), transparent 30%),
+      radial-gradient(circle at 100% 100%, oklch(0.96 0.04 165 / 0.5), transparent 35%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
+}
