@@ -1,6 +1,8 @@
+import { classifyByKeywords } from '../ai/keywordClassifier.js';
 import { RESOLVED_STATUSES } from '../constants/tickets.js';
 import { query, withTransaction } from '../db/pool.js';
 import { AppError } from '../utils/AppError.js';
+import { generateDraft as aiGenerateDraft, classifyTicket } from './ai.service.js';
 import { assertBookBelongsToAuthor, toBook } from './book.service.js';
 
 const TICKET_SELECT = `
@@ -193,14 +195,31 @@ export async function createTicket(user, input) {
     await assertBookBelongsToAuthor(input.bookId, user.authorId);
   }
 
+  // Keyword triage is instant, so the ticket is never unclassified in the queue
+  // and still gets a sensible category if the LLM is down.
+  const triage = classifyByKeywords(input.subject, input.description);
   const { rows } = await query(
-    `INSERT INTO tickets (author_id, book_id, subject, description, attachment_name)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO tickets (author_id, book_id, subject, description, attachment_name,
+                          category, category_source, priority, priority_source, ai_reasoning)
+     VALUES ($1, $2, $3, $4, $5, $6, 'fallback', $7, 'fallback', $8)
      RETURNING id`,
-    [user.authorId, input.bookId, input.subject, input.description, input.attachmentName],
+    [
+      user.authorId,
+      input.bookId,
+      input.subject,
+      input.description,
+      input.attachmentName,
+      triage.category,
+      triage.priority,
+      triage.reasoning,
+    ],
   );
+  const ticketId = rows[0].id;
 
-  return getTicket(user, rows[0].id);
+  // The author does not wait on the LLM; it refines the triage in the background.
+  classifyTicket(ticketId).catch((err) => console.error(`Background classification failed for ${ticketId}`, err));
+
+  return getTicket(user, ticketId);
 }
 
 /**
@@ -235,9 +254,12 @@ export async function addMessage(user, ticketId, { body, aiAssisted }) {
       [ticketId, user.id, body, isAdmin && aiAssisted],
     );
 
+    // Any new message makes the cached draft stale.
     await client.query(
       `UPDATE tickets
-       SET status = $2::text,
+       SET ai_draft = NULL,
+           ai_draft_generated_at = NULL,
+           status = $2::text,
            resolved_at = CASE WHEN $2::text = ANY($3::text[]) THEN resolved_at ELSE NULL END,
            assigned_to = CASE WHEN $4::int IS NOT NULL THEN COALESCE(assigned_to, $4::int) ELSE assigned_to END
        WHERE id = $1`,
@@ -285,7 +307,13 @@ export async function updateTicket(admin, ticketId, changes) {
     );
   }
   if (changes.category !== undefined) {
-    sets.push(`category = ${param(changes.category)}`, "category_source = 'admin'");
+    const category = param(changes.category);
+    sets.push(`category = ${category}`, "category_source = 'admin'");
+    // The draft was written with the old category's policy.
+    sets.push(
+      `ai_draft = CASE WHEN category IS DISTINCT FROM ${category} THEN NULL ELSE ai_draft END`,
+      `ai_draft_generated_at = CASE WHEN category IS DISTINCT FROM ${category} THEN NULL ELSE ai_draft_generated_at END`,
+    );
   }
   if (changes.priority !== undefined) {
     sets.push(`priority = ${param(changes.priority)}`, "priority_source = 'admin'");
@@ -297,6 +325,21 @@ export async function updateTicket(admin, ticketId, changes) {
   const { rowCount } = await query(`UPDATE tickets SET ${sets.join(', ')} WHERE id = $1`, params);
   if (rowCount === 0) throw AppError.notFound('Ticket');
 
+  return getTicket(admin, ticketId);
+}
+
+export async function generateDraft(admin, ticketId) {
+  await findTicketRow(admin, ticketId);
+  return aiGenerateDraft(ticketId);
+}
+
+/** Re-runs LLM classification, e.g. after an outage left a ticket on keyword triage. */
+export async function reclassify(admin, ticketId) {
+  await findTicketRow(admin, ticketId);
+  const result = await classifyTicket(ticketId);
+  if (!result) {
+    throw AppError.serviceUnavailable('AI_UNAVAILABLE', 'AI classification is unavailable right now. Set the category manually or try again shortly.');
+  }
   return getTicket(admin, ticketId);
 }
 

@@ -30,4 +30,8 @@ export class AppError extends Error {
   static conflict(message) {
     return new AppError(409, 'CONFLICT', message);
   }
+
+  static serviceUnavailable(code, message) {
+    return new AppError(503, code, message);
+  }
 }

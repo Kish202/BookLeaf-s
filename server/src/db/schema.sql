@@ -1,6 +1,7 @@
 -- BookLeaf Author Support Portal schema.
 -- Running this file resets the database (drops and recreates every table).
 
+DROP TABLE IF EXISTS ai_requests CASCADE;
 DROP TABLE IF EXISTS ticket_notes CASCADE;
 DROP TABLE IF EXISTS ticket_messages CASCADE;
 DROP TABLE IF EXISTS tickets CASCADE;
@@ -127,3 +128,19 @@ CREATE TABLE ticket_notes (
 );
 
 CREATE INDEX ticket_notes_ticket_idx ON ticket_notes (ticket_id, created_at);
+
+-- One row per LLM call, for cost tracking and spotting outages.
+CREATE TABLE ai_requests (
+  id                SERIAL PRIMARY KEY,
+  ticket_id         INTEGER REFERENCES tickets (id) ON DELETE SET NULL,
+  purpose           TEXT NOT NULL CHECK (purpose IN ('classify', 'draft')),
+  model             TEXT NOT NULL,
+  status            TEXT NOT NULL CHECK (status IN ('success', 'error')),
+  prompt_tokens     INTEGER,
+  completion_tokens INTEGER,
+  latency_ms        INTEGER,
+  error_code        TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX ai_requests_created_idx ON ai_requests (created_at);

@@ -35,5 +35,7 @@ router.post(
   validate({ params: idParamSchema, body: createNoteSchema }),
   ticketController.addNote,
 );
+router.post('/:id/draft', authorize('admin'), validate({ params: idParamSchema }), ticketController.generateDraft);
+router.post('/:id/classify', authorize('admin'), validate({ params: idParamSchema }), ticketController.reclassify);
 
 export default router;

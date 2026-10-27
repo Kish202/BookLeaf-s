@@ -16,6 +16,12 @@ const envSchema = z.object({
   CLIENT_ORIGIN: z.string().default('http://localhost:5173'),
   SEED_AUTHOR_PASSWORD: z.string().min(6).default('Author@123'),
   SEED_ADMIN_PASSWORD: z.string().min(6).default('Admin@123'),
+  // Optional: without a key the app runs on keyword classification and manual replies.
+  GROQ_API_KEY: z.string().optional(),
+  GROQ_CLASSIFY_MODEL: z.string().default('openai/gpt-oss-20b'),
+  GROQ_DRAFT_MODEL: z.string().default('openai/gpt-oss-120b'),
+  GROQ_FALLBACK_MODEL: z.string().default('qwen/qwen3.8-27b'),
+  GROQ_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -46,5 +52,12 @@ export const config = {
   seed: {
     authorPassword: env.SEED_AUTHOR_PASSWORD,
     adminPassword: env.SEED_ADMIN_PASSWORD,
+  },
+  ai: {
+    apiKey: env.GROQ_API_KEY || null,
+    classifyModel: env.GROQ_CLASSIFY_MODEL,
+    draftModel: env.GROQ_DRAFT_MODEL,
+    fallbackModel: env.GROQ_FALLBACK_MODEL,
+    timeoutMs: env.GROQ_TIMEOUT_MS,
   },
 };

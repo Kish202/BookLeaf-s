@@ -22,6 +22,14 @@ export async function addMessage(req, res) {
   res.status(201).json({ data: result });
 }
 
+export async function generateDraft(req, res) {
+  res.json({ data: await ticketService.generateDraft(req.user, req.validated.params.id) });
+}
+
+export async function reclassify(req, res) {
+  res.json({ data: await ticketService.reclassify(req.user, req.validated.params.id) });
+}
+
 export async function addNote(req, res) {
   const note = await ticketService.addNote(req.user, req.validated.params.id, req.validated.body.body);
   res.status(201).json({ data: note });
