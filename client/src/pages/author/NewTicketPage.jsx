@@ -72,7 +72,7 @@ export function NewTicketPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title="How can we help? 🌸" description="Tell us what's going on and our team will reply here." />
-      <Card className="rounded-3xl border-0 shadow-lg shadow-primary/5">
+      <Card className="rounded-lg border-0 shadow-lg shadow-primary/5">
         <CardContent>
           <form onSubmit={handleSubmit} noValidate>
             <FieldGroup>
@@ -137,7 +137,7 @@ export function NewTicketPage() {
                   onChange={(e) => set('attachmentName')(e.target.files?.[0]?.name ?? null)}
                 />
                 {form.attachmentName ? (
-                  <div className="flex items-center justify-between rounded-2xl bg-muted px-4 py-2.5 text-sm">
+                  <div className="flex items-center justify-between rounded-md bg-muted px-4 py-2.5 text-sm">
                     <span className="flex items-center gap-2 truncate font-medium">
                       <Paperclip className="size-4" /> {form.attachmentName}
                     </span>

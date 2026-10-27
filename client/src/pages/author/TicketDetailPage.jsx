@@ -41,7 +41,15 @@ export function TicketDetailPage() {
   })
 
   if (isPending) return <LoadingState label="Opening ticket…" />
-  if (error) return <ErrorState error={error} onRetry={error.status === 404 ? undefined : refetch} />
+  if (error) {
+    return (
+      <ErrorState
+        error={error}
+        onRetry={error.status === 404 ? undefined : refetch}
+        fallback={error.status === 404 ? 'This ticket could not be found.' : "We couldn't load this ticket."}
+      />
+    )
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -68,9 +76,9 @@ export function TicketDetailPage() {
         </p>
       </div>
 
-      <div className="rounded-2xl bg-secondary/60 px-4 py-3 text-sm text-secondary-foreground">{STATUS_COPY[ticket.status]}</div>
+      <div className="rounded-md bg-secondary/60 px-4 py-3 text-sm text-secondary-foreground">{STATUS_COPY[ticket.status]}</div>
 
-      <Card className="rounded-3xl border-0 shadow-lg shadow-primary/5">
+      <Card className="rounded-lg border-0 shadow-lg shadow-primary/5">
         <CardContent className="space-y-6">
           <MessageThread ticket={ticket} authorName={user.name} viewerRole="author" />
           {ticket.status !== 'closed' && (

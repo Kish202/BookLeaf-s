@@ -21,7 +21,7 @@ export function ReplyBox({ value, onChange, onSubmit, pending, placeholder, subm
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && value.trim()) onSubmit()
         }}
-        className="rounded-2xl bg-card"
+        className="rounded-md bg-card"
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">{children}</div>

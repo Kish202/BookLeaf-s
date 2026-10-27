@@ -27,7 +27,7 @@ function Bubble({ name, role, body, createdAt, aiAssisted, isOriginal, alignRigh
         </div>
         <div
           className={cn(
-            'rounded-3xl px-4 py-3 text-left text-sm leading-relaxed whitespace-pre-wrap shadow-sm',
+            'rounded-lg px-4 py-3 text-left text-sm leading-relaxed whitespace-pre-wrap shadow-sm',
             isStaff ? 'bg-card ring-1 ring-primary/15' : 'bg-secondary/70',
             alignRight ? 'rounded-tr-md' : 'rounded-tl-md',
           )}

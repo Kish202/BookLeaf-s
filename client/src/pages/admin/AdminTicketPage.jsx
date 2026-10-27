@@ -59,7 +59,7 @@ function DraftPanel({ ticket, generate, onUse }) {
 
   if (generate.isPending) {
     return (
-      <div className="space-y-2 rounded-3xl bg-primary/5 p-4 ring-1 ring-primary/15">
+      <div className="space-y-2 rounded-lg bg-primary/5 p-4 ring-1 ring-primary/15">
         <p className="flex items-center gap-2 text-sm font-bold text-primary">
           <Sparkles className="size-4 animate-pulse" /> Drafting a reply with BookLeaf policies…
         </p>
@@ -72,7 +72,7 @@ function DraftPanel({ ticket, generate, onUse }) {
 
   if (generate.error) {
     return (
-      <Alert className="rounded-3xl border-peach-foreground/30 bg-peach/50">
+      <Alert className="rounded-lg border-peach-foreground/30 bg-peach/50">
         <Wand2 />
         <AlertTitle>{unavailable ? 'AI draft unavailable' : 'Could not generate a draft'}</AlertTitle>
         <AlertDescription>
@@ -87,7 +87,7 @@ function DraftPanel({ ticket, generate, onUse }) {
 
   if (!ticket.aiDraft) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-3xl border border-dashed p-4 text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
         <span>No AI draft for the latest message.</span>
         <Button size="sm" variant="secondary" onClick={() => generate.mutate()}>
           <Sparkles /> Generate draft
@@ -97,7 +97,7 @@ function DraftPanel({ ticket, generate, onUse }) {
   }
 
   return (
-    <div className="space-y-3 rounded-3xl bg-primary/5 p-4 ring-1 ring-primary/15">
+    <div className="space-y-3 rounded-lg bg-primary/5 p-4 ring-1 ring-primary/15">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-sm font-bold text-primary">
           <Sparkles className="size-4" /> AI-suggested reply
@@ -206,7 +206,9 @@ export function AdminTicketPage() {
   }, [ticket, needsReply, draftKey, drafting, requestDraft])
 
   if (ticketQuery.isPending) return <LoadingState label="Opening ticket…" />
-  if (ticketQuery.error) return <ErrorState error={ticketQuery.error} onRetry={ticketQuery.refetch} />
+  if (ticketQuery.error) {
+    return <ErrorState error={ticketQuery.error} onRetry={ticketQuery.refetch} fallback="We couldn't load this ticket." />
+  }
 
   const book = ticket.book
   const isMine = ticket.assignedTo?.id === user.id
@@ -240,14 +242,14 @@ export function AdminTicketPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="min-w-0 space-y-6">
-          <Card className="rounded-3xl border-0 shadow-lg shadow-primary/5">
+          <Card className="rounded-lg border-0 shadow-lg shadow-primary/5">
             <CardContent>
               <MessageThread ticket={ticket} authorName={ticket.author.name} viewerRole="admin" />
             </CardContent>
           </Card>
 
           {ticket.status !== 'closed' && (
-            <Card className="rounded-3xl border-0 shadow-lg shadow-primary/5">
+            <Card className="rounded-lg border-0 shadow-lg shadow-primary/5">
               <CardHeader>
                 <CardTitle className="font-extrabold">Reply to {ticket.author.name.split(' ')[0]}</CardTitle>
               </CardHeader>
@@ -291,7 +293,7 @@ export function AdminTicketPage() {
         </div>
 
         <aside className="space-y-4">
-          <Card className="gap-4 rounded-3xl border-0 shadow-sm">
+          <Card className="gap-4 rounded-lg border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="font-extrabold">Triage</CardTitle>
             </CardHeader>
@@ -320,7 +322,7 @@ export function AdminTicketPage() {
                 disabled={update.isPending}
               />
               {ticket.aiReasoning && (
-                <p className="rounded-2xl bg-muted px-3 py-2 text-xs text-muted-foreground">
+                <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
                   <span className="font-semibold text-foreground">Why: </span>
                   {ticket.aiReasoning}
                 </p>
@@ -333,7 +335,7 @@ export function AdminTicketPage() {
             </CardContent>
           </Card>
 
-          <Card className="gap-4 rounded-3xl border-0 shadow-sm">
+          <Card className="gap-4 rounded-lg border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="font-extrabold">Assignment</CardTitle>
             </CardHeader>
@@ -353,7 +355,7 @@ export function AdminTicketPage() {
             </CardContent>
           </Card>
 
-          <Card className="gap-4 rounded-3xl border-0 shadow-sm">
+          <Card className="gap-4 rounded-lg border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="font-extrabold">{book ? '📖 Book' : '💬 General query'}</CardTitle>
             </CardHeader>
@@ -384,7 +386,7 @@ export function AdminTicketPage() {
             </CardContent>
           </Card>
 
-          <Card className="gap-4 rounded-3xl border-0 bg-butter/40 shadow-sm">
+          <Card className="gap-4 rounded-lg border-0 bg-butter/40 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-extrabold">
                 <Lock className="size-4" /> Internal notes
@@ -394,7 +396,7 @@ export function AdminTicketPage() {
               <p className="text-xs text-muted-foreground">Only visible to the BookLeaf team.</p>
               {ticket.notes.length === 0 && <p className="text-sm text-muted-foreground">No notes yet.</p>}
               {ticket.notes.map((n) => (
-                <div key={n.id} className="rounded-2xl bg-card p-3 text-sm shadow-xs">
+                <div key={n.id} className="rounded-md bg-card p-3 text-sm shadow-xs">
                   <p className="whitespace-pre-wrap">{n.body}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {n.admin.name} · {timeAgo(n.createdAt)}
@@ -407,7 +409,7 @@ export function AdminTicketPage() {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="e.g. Checked with finance, payout batch delayed…"
-                className="rounded-2xl bg-card"
+                className="rounded-md bg-card"
               />
               <Button size="sm" variant="secondary" className="w-full" disabled={!note.trim() || addNote.isPending} onClick={() => addNote.mutate()}>
                 {addNote.isPending && <Spinner />} Add note

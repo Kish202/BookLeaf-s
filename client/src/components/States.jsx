@@ -1,6 +1,5 @@
-import { AlertCircle } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { useEffect } from 'react'
+import { toast } from 'sonner'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Spinner } from '@/components/ui/spinner'
 
@@ -12,26 +11,30 @@ export function LoadingState({ label = 'Loading…' }) {
   )
 }
 
-export function ErrorState({ error, onRetry }) {
-  return (
-    <Alert variant="destructive" className="rounded-2xl">
-      <AlertCircle />
-      <AlertTitle>Something went wrong</AlertTitle>
-      <AlertDescription>
-        <p>{error?.message ?? 'Please try again.'}</p>
-        {onRetry && (
-          <Button size="sm" variant="outline" className="mt-2" onClick={onRetry}>
-            Try again
-          </Button>
-        )}
-      </AlertDescription>
-    </Alert>
-  )
+/**
+ * Reports a failed load as a toast (top-right) instead of a block in the page.
+ * `fallback` is a short line for pages that have nothing else to show.
+ */
+export function ErrorState({ error, onRetry, fallback }) {
+  const message = error?.message ?? 'Please try again.'
+
+  useEffect(() => {
+    if (!error) return
+    // A stable id stops refetches and re-renders from stacking duplicate toasts.
+    toast.error('Something went wrong', {
+      id: `load-error:${message}`,
+      description: message,
+      action: onRetry ? { label: 'Try again', onClick: () => onRetry() } : undefined,
+    })
+  }, [error, message, onRetry])
+
+  if (!fallback) return null
+  return <p className="py-16 text-center text-sm text-muted-foreground">{fallback}</p>
 }
 
 export function EmptyState({ emoji, title, description, children }) {
   return (
-    <Empty className="rounded-3xl border border-dashed bg-card/60">
+    <Empty className="rounded-lg border border-dashed bg-card/60">
       <EmptyHeader>
         <EmptyMedia className="text-4xl">{emoji}</EmptyMedia>
         <EmptyTitle>{title}</EmptyTitle>

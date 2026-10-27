@@ -1,9 +1,10 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { differenceInHours, parseISO } from 'date-fns'
-import { ChevronLeft, ChevronRight, RotateCcw, Search } from 'lucide-react'
+import { RotateCcw, Search } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { CategoryBadge, PriorityBadge, SourceTag, StatusBadge } from '@/components/Badges'
+import { Pagination } from '@/components/Pagination'
 import { EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/States'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -62,7 +63,7 @@ function Counter({ emoji, label, value, tone, onClick, active }) {
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-3xl p-4 text-left transition hover:-translate-y-0.5',
+        'rounded-lg p-4 text-left transition hover:-translate-y-0.5',
         tone,
         active && 'ring-2 ring-current ring-offset-2 ring-offset-background',
       )}
@@ -145,7 +146,6 @@ export function QueuePage() {
   }
 
   const isDefault = JSON.stringify(filters) === JSON.stringify(DEFAULT_FILTERS)
-  const totalPages = data ? Math.max(1, Math.ceil(data.pagination.total / PAGE_SIZE)) : 1
 
   return (
     <>
@@ -158,7 +158,7 @@ export function QueuePage() {
         <Counter emoji="⭐" label="Assigned to me" value={counts.data?.mine} tone="bg-mint text-mint-foreground" onClick={() => quickFilter({ assignedTo: 'me' })} active={filters.assignedTo === 'me'} />
       </div>
 
-      <Card className="mb-4 gap-3 rounded-3xl border-0 p-4 shadow-sm">
+      <Card className="mb-4 gap-3 rounded-lg border-0 p-4 shadow-sm">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="relative sm:col-span-2">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -214,7 +214,7 @@ export function QueuePage() {
         <EmptyState emoji="🌷" title="No tickets match" description={isDefault ? 'Inbox zero! Every ticket has been handled.' : 'Try loosening the filters.'} />
       )}
       {data?.data.length > 0 && (
-        <Card className={cn('overflow-hidden rounded-3xl border-0 p-0 shadow-sm transition-opacity', isFetching && 'opacity-70')}>
+        <Card className={cn('overflow-hidden rounded-lg border-0 p-0 shadow-sm transition-opacity', isFetching && 'opacity-70')}>
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
@@ -269,22 +269,7 @@ export function QueuePage() {
               ))}
             </TableBody>
           </Table>
-          <div className="flex items-center justify-between border-t px-5 py-3 text-sm text-muted-foreground">
-            <span>
-              {data.pagination.total} ticket{data.pagination.total === 1 ? '' : 's'}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button size="icon-sm" variant="ghost" aria-label="Previous page" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                <ChevronLeft />
-              </Button>
-              <span>
-                Page {page} of {totalPages}
-              </span>
-              <Button size="icon-sm" variant="ghost" aria-label="Next page" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
-                <ChevronRight />
-              </Button>
-            </div>
-          </div>
+          <Pagination page={page} pageSize={PAGE_SIZE} total={data.pagination.total} onPageChange={setPage} />
         </Card>
       )}
     </>

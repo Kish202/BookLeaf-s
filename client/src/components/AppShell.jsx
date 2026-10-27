@@ -18,6 +18,9 @@ import { useLiveEvents } from '@/hooks/useLiveEvents'
 import { initials } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
+// Shared by the header and main content so their edges line up.
+const CONTAINER = 'w-full px-4 sm:px-6 lg:px-10'
+
 const NAV = {
   author: [
     { to: '/books', label: 'My Books' },
@@ -65,11 +68,11 @@ export function AppShell() {
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4">
-          <NavLink to="/">
+        <div className={cn(CONTAINER, 'flex h-16 items-center gap-4 sm:gap-8')}>
+          <NavLink to="/" className="shrink-0">
             <Logo />
           </NavLink>
-          <nav className="flex flex-1 items-center gap-1 overflow-x-auto">
+          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
             {NAV[user.role].map((item) => (
               <NavLink
                 key={item.to}
@@ -86,32 +89,34 @@ export function AppShell() {
               </NavLink>
             ))}
           </nav>
-          <LiveIndicator connected={connected} />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-10 gap-2 rounded-full pr-3 pl-1">
-                <Avatar className="size-8">
-                  <AvatarFallback className="bg-secondary text-xs font-bold text-secondary-foreground">
-                    {initials(user.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden text-sm font-semibold md:inline">{user.name}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
-                <p className="font-semibold">{user.name}</p>
-                <p className="text-xs font-normal text-muted-foreground">{user.email}</p>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={logout}>
-                <LogOut /> Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex shrink-0 items-center gap-2">
+            <LiveIndicator connected={connected} />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-10 gap-2 rounded-full pr-3 pl-1">
+                  <Avatar className="size-8">
+                    <AvatarFallback className="bg-secondary text-xs font-bold text-secondary-foreground">
+                      {initials(user.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden text-sm font-semibold md:inline">{user.name}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <p className="font-semibold">{user.name}</p>
+                  <p className="text-xs font-normal text-muted-foreground">{user.email}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={logout}>
+                  <LogOut /> Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <main className={cn(CONTAINER, 'py-8')}>
         <Outlet />
       </main>
     </div>

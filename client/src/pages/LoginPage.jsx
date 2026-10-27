@@ -50,7 +50,7 @@ export function LoginPage() {
           <p className="mt-3 text-muted-foreground">Your author support corner 📚✨</p>
         </div>
 
-        <Card className="rounded-3xl border-0 shadow-xl shadow-primary/10">
+        <Card className="rounded-lg border-0 shadow-xl shadow-primary/10">
           <CardHeader>
             <CardTitle className="text-xl font-extrabold">Welcome back!</CardTitle>
             <CardDescription>Log in to see your books and talk to our team.</CardDescription>
@@ -59,7 +59,7 @@ export function LoginPage() {
             <form onSubmit={handleSubmit} noValidate>
               <FieldGroup>
                 {error && (
-                  <Alert variant="destructive" className="rounded-2xl">
+                  <Alert variant="destructive" className="rounded-md">
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
@@ -94,7 +94,7 @@ export function LoginPage() {
           </CardContent>
         </Card>
 
-        <div className="rounded-3xl border border-dashed bg-card/60 p-4">
+        <div className="rounded-lg border border-dashed bg-card/60 p-4">
           <p className="mb-3 text-center text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             Demo accounts — tap to fill
           </p>
