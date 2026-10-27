@@ -43,15 +43,15 @@ export function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-screen place-items-center px-4 py-10">
-      <div className="w-full max-w-md space-y-6">
+    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
+      <div className="mx-auto w-full max-w-md space-y-6">
         <div className="text-center">
           <Logo className="text-2xl" />
           <p className="mt-3 text-muted-foreground">Your author support corner 📚✨</p>
         </div>
 
         <Card className="rounded-lg border-0 shadow-xl shadow-primary/10">
-          <CardHeader>
+          <CardHeader className="text-center">
             <CardTitle className="text-xl font-extrabold">Welcome back!</CardTitle>
             <CardDescription>Log in to see your books and talk to our team.</CardDescription>
           </CardHeader>
