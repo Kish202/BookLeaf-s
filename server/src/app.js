@@ -11,7 +11,17 @@ export function createApp() {
 
   app.disable('x-powered-by');
   app.use(helmet());
-  app.use(cors({ origin: config.clientOrigins }));
+  // In development Vite may pick another port (5174, ...) when 5173 is busy.
+  const localhostOrigin = /^http:\/\/localhost:\d+$/;
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        const allowed =
+          !origin || config.clientOrigins.includes(origin) || (!config.isProduction && localhostOrigin.test(origin));
+        callback(null, allowed);
+      },
+    }),
+  );
   app.use(express.json({ limit: '100kb' }));
   if (config.env !== 'test') {
     app.use(morgan(config.isProduction ? 'combined' : 'dev'));

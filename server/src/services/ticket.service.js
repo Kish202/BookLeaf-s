@@ -101,6 +101,9 @@ function buildListFilters(user, filters) {
   if (filters.status) add('t.status = ANY(?)', filters.status);
   if (filters.from) add('t.created_at >= ?::date', filters.from);
   if (filters.to) add("t.created_at < ?::date + interval '1 day'", filters.to);
+  if (filters.search) {
+    add('(t.subject ILIKE ? OR t.description ILIKE ? OR au.name ILIKE ? OR b.title ILIKE ?)', `%${filters.search}%`);
+  }
 
   if (user.role === 'admin') {
     if (filters.category) add('t.category = ANY(?)', filters.category);
@@ -108,9 +111,6 @@ function buildListFilters(user, filters) {
     if (filters.assignedTo === 'unassigned') conditions.push('t.assigned_to IS NULL');
     else if (filters.assignedTo === 'me') add('t.assigned_to = ?', user.id);
     else if (filters.assignedTo) add('t.assigned_to = ?', filters.assignedTo);
-    if (filters.search) {
-      add('(t.subject ILIKE ? OR t.description ILIKE ? OR au.name ILIKE ?)', `%${filters.search}%`);
-    }
   }
 
   return { where: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '', params };

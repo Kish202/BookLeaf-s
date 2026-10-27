@@ -45,22 +45,55 @@ function summarize(books) {
   );
 }
 
-export async function listBooks(user, { authorId } = {}) {
+const PUBLISHED = 'Published & Live';
+
+const BOOK_SORTS = {
+  // In-production books (no publication date yet) are the newest.
+  newest: 'b.publication_date DESC NULLS FIRST, b.title',
+  oldest: 'b.publication_date ASC NULLS LAST, b.title',
+  title: 'b.title',
+  sales: 'b.total_copies_sold DESC, b.title',
+  pending: 'b.royalty_pending DESC, b.title',
+};
+
+export async function listBooks(user, { authorId, search, status, sort = 'newest', page = 1, pageSize = 100 } = {}) {
   const scopedAuthorId = user.role === 'author' ? user.authorId : authorId;
-  const params = [];
-  let where = '';
+  const scopeParams = [];
+  const scope = [];
   if (scopedAuthorId) {
-    params.push(scopedAuthorId);
-    where = 'WHERE b.author_id = $1';
+    scopeParams.push(scopedAuthorId);
+    scope.push(`b.author_id = $${scopeParams.length}`);
   }
 
-  const { rows } = await query(
-    `${BOOK_SELECT} ${where}
-     ORDER BY b.publication_date DESC NULLS FIRST, b.title`,
-    params,
-  );
-  const books = rows.map(toBook);
-  return { data: books, summary: summarize(books) };
+  const params = [...scopeParams];
+  const conditions = [...scope];
+  if (search) {
+    params.push(`%${search}%`);
+    const p = `$${params.length}`;
+    conditions.push(`(b.title ILIKE ${p} OR b.genre ILIKE ${p} OR b.isbn ILIKE ${p} OR u.name ILIKE ${p})`);
+  }
+  if (status) {
+    params.push(PUBLISHED);
+    conditions.push(`b.status ${status === 'live' ? '=' : '<>'} $${params.length}`);
+  }
+  const whereOf = (parts) => (parts.length ? `WHERE ${parts.join(' AND ')}` : '');
+
+  // The summary always covers the whole catalogue in scope, not just the filtered page.
+  const [pageResult, allResult] = await Promise.all([
+    query(
+      `SELECT *, count(*) OVER()::int AS total_count FROM (${BOOK_SELECT} ${whereOf(conditions)}) b
+       ORDER BY ${BOOK_SORTS[sort]}, b.id
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, pageSize, (page - 1) * pageSize],
+    ),
+    query(`${BOOK_SELECT} ${whereOf(scope)}`, scopeParams),
+  ]);
+
+  return {
+    data: pageResult.rows.map(toBook),
+    summary: summarize(allResult.rows.map(toBook)),
+    pagination: { page, pageSize, total: pageResult.rows[0]?.total_count ?? 0 },
+  };
 }
 
 export async function getBook(user, bookId) {
