@@ -19,9 +19,15 @@ npm run db:reset
 
 # 3. Run the API on http://localhost:4000
 npm run dev
+
+# 4. In a second terminal, run the web app on http://localhost:5173
+cd client
+cp .env.example .env          # VITE_API_URL, defaults to http://localhost:4000/api
+npm install
+npm run dev
 ```
 
-`npm run db:reset` drops and recreates all tables, so it is safe to re-run at any time.
+`npm run db:reset` drops and recreates all tables, so it is safe to re-run at any time. The login page has one-click demo account buttons.
 
 ## Test credentials
 
@@ -39,12 +45,22 @@ server/src/
   config/       environment loading and validation
   db/           connection pool, schema.sql, seed script, sample data
   middleware/   authentication, role checks, request validation, error handling
+  realtime/     in-process event bus for live updates
   routes/       URL definitions
   controllers/  HTTP layer: read request, send response
   services/     business logic and database queries
   validators/   zod request schemas
   utils/        shared helpers (AppError)
+
+client/src/
+  components/   app shell, badges, message thread, shared states; ui/ holds shadcn components
+  context/      auth session
+  hooks/        live updates (SSE), debounce
+  lib/          API client, enum display metadata, formatting
+  pages/        author/ (books, tickets) and admin/ (queue, ticket workspace)
 ```
+
+Frontend: React 19 + Vite, Tailwind CSS v4, shadcn/ui (Radix), TanStack Query for server state, React Router.
 
 ## API (so far)
 
@@ -67,6 +83,7 @@ All error responses use the shape `{ "error": { "code", "message", "details?" } 
 | POST | `/api/tickets/:id/classify` | admin | Re-run AI classification (e.g. after an outage). Admin overrides are kept. 503 `AI_UNAVAILABLE` if the LLM is down |
 | GET | `/api/users/admins` | admin | Admins available for assignment |
 | GET | `/api/ai/usage` | admin | Requests, errors, tokens and latency per model, `?days=30` |
+| GET | `/api/events` | author, admin | Server-Sent Events stream of ticket changes (see below) |
 
 **Ticket list filters** (`GET /api/tickets`): `status`, `category`, `priority` (each accepts a comma-separated list, e.g. `status=open,in_progress`), `assignedTo` (`me`, `unassigned` or an admin id), `from` / `to` (`YYYY-MM-DD`), `search`, `sort` (`urgency` default, `newest`, `oldest`, `updated`), `page`, `pageSize` (max 100). Category, priority, assignment and search filters apply to admins only.
 
@@ -76,6 +93,18 @@ All error responses use the shape `{ "error": { "code", "message", "details?" } 
 - An admin reply on an `open` ticket moves it to `in_progress` and assigns it to that admin if it is unassigned.
 - An author reply on a `resolved` ticket reopens it; authors cannot reply to `closed` tickets (409).
 - Setting status to `resolved`/`closed` records `resolvedAt`; reopening clears it.
+
+## Real-time updates
+
+`GET /api/events` is a Server-Sent Events stream. Events carry only ids, e.g. `event: message.created` / `data: {"type":"message.created","ticketId":9}`; the client then re-fetches through the normal REST endpoints, so role-based access control lives in one place and nothing private travels over the stream.
+
+| Event | Sent to |
+|---|---|
+| `ticket.created`, `message.created` | admins + the ticket's author |
+| `ticket.updated` | admins; the author too when the status changed |
+| `ticket.classified`, `note.created` | admins only |
+
+The client reads the stream with `fetch` instead of `EventSource`, so the JWT goes in the `Authorization` header rather than the URL (where it would end up in access logs). It reconnects with exponential backoff and re-fetches on reconnect to catch anything missed. A 25-second heartbeat keeps proxies from closing idle connections. The event bus is in-process; running several API instances would need Postgres `LISTEN/NOTIFY` or Redis instead.
 
 ## AI integration
 
