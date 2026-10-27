@@ -11,7 +11,7 @@ Requirements: Node.js 20+ and a PostgreSQL database. We use [Supabase](https://s
 ```bash
 # 1. Configure the API
 cd server
-cp .env.example .env          # set DATABASE_URL (Supabase session pooler URI) and JWT_SECRET
+cp .env.example .env          # set DATABASE_URL (Supabase session pooler URI), JWT_SECRET and GROQ_API_KEY
 npm install
 
 # 2. Create tables and load the sample dataset
@@ -35,6 +35,7 @@ npm run dev
 
 ```
 server/src/
+  ai/           Groq client, knowledge base, prompts, account facts, keyword fallback
   config/       environment loading and validation
   db/           connection pool, schema.sql, seed script, sample data
   middleware/   authentication, role checks, request validation, error handling
@@ -62,7 +63,10 @@ All error responses use the shape `{ "error": { "code", "message", "details?" } 
 | PATCH | `/api/tickets/:id` | admin | Any of `{ status, category, priority, assignedTo }`; category/priority changes are recorded as admin overrides |
 | POST | `/api/tickets/:id/messages` | author, admin | `{ body, aiAssisted? }` — reply visible to the author |
 | POST | `/api/tickets/:id/notes` | admin | `{ body }` — internal note, never shown to authors |
+| POST | `/api/tickets/:id/draft` | admin | Generate (or regenerate) the AI reply draft → `{ draft, model, generatedAt }`. 503 `AI_UNAVAILABLE` if the LLM is down |
+| POST | `/api/tickets/:id/classify` | admin | Re-run AI classification (e.g. after an outage). Admin overrides are kept. 503 `AI_UNAVAILABLE` if the LLM is down |
 | GET | `/api/users/admins` | admin | Admins available for assignment |
+| GET | `/api/ai/usage` | admin | Requests, errors, tokens and latency per model, `?days=30` |
 
 **Ticket list filters** (`GET /api/tickets`): `status`, `category`, `priority` (each accepts a comma-separated list, e.g. `status=open,in_progress`), `assignedTo` (`me`, `unassigned` or an admin id), `from` / `to` (`YYYY-MM-DD`), `search`, `sort` (`urgency` default, `newest`, `oldest`, `updated`), `page`, `pageSize` (max 100). Category, priority, assignment and search filters apply to admins only.
 
@@ -72,3 +76,41 @@ All error responses use the shape `{ "error": { "code", "message", "details?" } 
 - An admin reply on an `open` ticket moves it to `in_progress` and assigns it to that admin if it is unassigned.
 - An author reply on a `resolved` ticket reopens it; authors cannot reply to `closed` tickets (409).
 - Setting status to `resolved`/`closed` records `resolvedAt`; reopening clears it.
+
+## AI integration
+
+**Provider and models (Groq).** Groq serves open-weight models with very low latency (≈0.6 s classification, ≈1–2 s drafts in testing) and low per-token pricing, which suits a support tool where an admin is waiting on a draft.
+
+| Task | Model | Why |
+|---|---|---|
+| Classification + priority | `openai/gpt-oss-20b` | Small and cheap; strict JSON schema output, temperature 0 |
+| Reply drafts | `openai/gpt-oss-120b` | Better writing and instruction following for author-facing text |
+| Fallback for both | `qwen/qwen3.8-27b` | Different model family, used when the primary is rate-limited or down |
+
+All three are configurable through `GROQ_*` environment variables.
+
+**Ticket flow**
+1. On creation the ticket is classified instantly by a keyword classifier (`category_source = 'fallback'`) and saved. The author never waits on the LLM.
+2. The LLM classification runs in the background and replaces the keyword result (`source = 'ai'`), with a one-sentence reasoning the admin can scan. Fields an admin has already overridden (`source = 'admin'`) are never overwritten.
+3. When an admin opens a ticket, the client requests a draft. It is cached on the ticket and cleared automatically when a new message arrives or the admin changes the category, so it is only regenerated when it would actually differ.
+
+**Prompt strategy** (`server/src/ai/`)
+- `knowledgeBase.js` splits the BookLeaf knowledge base by category. A draft prompt carries the company overview, tone guidelines, *only the policy section for the ticket's category*, and one calibration example from BookLeaf's sample responses.
+- `accountFacts.js` pre-computes facts in code rather than asking the model to do date or threshold maths: next payout date from the quarterly cycle + 45 days, whether a balance is below the ₹1,000 threshold (rolls over), whether a payout looks overdue, current production stage and remaining stages. Royalty facts are only included for royalty and general tickets.
+- Rules forbid inventing dates, amounts or actions not present in the facts or policy, and are repeated at the end of the prompt. Author text is fenced in `<ticket>` / `<conversation>` tags and treated as data, to resist prompt injection.
+- Output is plain text, 90–200 words, opening with the author's first name and ending with a clear next step.
+
+**Cost controls**
+- Category-scoped knowledge base instead of the full document (roughly a third of the tokens).
+- Only the last 6 messages are sent, each truncated to 800 characters; descriptions are capped at 3,000 characters.
+- Classification uses the small model; gpt-oss runs with `reasoning_effort: low` to limit hidden reasoning tokens.
+- Drafts are cached and only regenerated when the conversation or category changes.
+- Every call is logged to `ai_requests` (model, tokens, latency, error code) and summarised at `GET /api/ai/usage`. Measured averages: ~660 tokens per classification, ~1,230 per draft.
+
+**Graceful degradation**
+- Each Groq call has a timeout (`GROQ_TIMEOUT_MS`, default 15 s) and one retry with backoff on 429 / 5xx / network errors, honouring `retry-after`.
+- If the primary model still fails, the fallback model is tried; invalid model output (bad JSON, empty draft) also falls through.
+- If everything fails: tickets are still created with keyword classification, drafts return `503 AI_UNAVAILABLE` with a "write the reply manually" message, and the admin can reply, override and later re-run classification.
+- Without `GROQ_API_KEY` the app runs entirely on keyword classification and manual replies.
+
+**Key security.** `GROQ_API_KEY` is read only on the server from environment variables (validated in `config/env.js`), never sent to the client, and `.env` is git-ignored.
