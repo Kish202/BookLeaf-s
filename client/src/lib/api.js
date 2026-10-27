@@ -1,4 +1,6 @@
-export const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api').replace(/\/$/, '')
+// Accepts the server address with or without the /api suffix.
+const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:4000').trim().replace(/\/+$/, '')
+export const API_URL = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`
 
 const TOKEN_KEY = 'bookleaf.token'
 
